@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from typing import Optional
-from models.blog import Blog
 
 app = FastAPI()
 
@@ -31,8 +30,3 @@ def blog(id: int):
 @app.get('/blog/{id}/comments')
 def comments(id: int):
     return {'comments': {'hi', 'hello'}}
-
-@app.post('/blog')
-def create_blog(request: Blog):
-    return request
-    return {'data': f'Blog is created with title "{request.title}"'}
