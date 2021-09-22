@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import FastAPI, Depends, status, HTTPException
 from . import schemas, models
 from .database import SessionLocal, engine
@@ -26,14 +27,14 @@ def create_blog(request: schemas.Blog, db: Session = Depends(get_db)):
 
 
 # get all blog in db
-@app.get('/blog')
+@app.get('/blog', response_model=List[schemas.ShowBlog])
 def get_all(db: Session = Depends(get_db)):
     blogs = db.query(models.Blog).all()
     return blogs
 
 
 # get specific blog with id == id
-@app.get('/blog/{id}', status_code = status.HTTP_200_OK)
+@app.get('/blog/{id}', status_code = status.HTTP_200_OK, response_model=schemas.ShowBlog)
 def get_blog(id: int, db: Session = Depends(get_db)):
     blog = db.query(models.Blog).filter(models.Blog.id == id).first()
     if not blog:
@@ -45,7 +46,12 @@ def get_blog(id: int, db: Session = Depends(get_db)):
 # delete specific blog with id == id
 @app.delete('/blog/{id}', status_code=status.HTTP_204_NO_CONTENT)
 def delete_blog(id: int, db: Session = Depends(get_db)):
-    db.query(models.Blog).filter(models.Blog.id == id).delete(synchronize_session=False)
+    blog = db.query(models.Blog).filter(models.Blog.id == id)
+    if not blog.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail=f'Blog with id {id} is not available.')
+    
+    blog.delete(synchronize_session=False)
     db.commit()
     return {'detail': f'Blog with id {id} has been deleted.'}
 
@@ -53,6 +59,11 @@ def delete_blog(id: int, db: Session = Depends(get_db)):
 # update blogs with id == id
 @app.put('/blog/{id}', status_code=status.HTTP_202_ACCEPTED)
 def update_blog(id: int, request: schemas.Blog, db: Session = Depends(get_db)):
-    db.query(models.Blog).filter(models.Blog.id == id).update({'title': request.title, 'body': request.body})
+    blog = db.query(models.Blog).filter(models.Blog.id == id)
+    if not blog.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail=f'Blog with id {id} is not available.')
+
+    blog.update(request)
     db.commit()
     return {'detail': f'Blog with id {id} has been updated'}
